@@ -60,9 +60,10 @@ def main():
             if tx and tx["hash"] != last_seen.get(eth):
                 value_eth = int(tx["value"]) / 1e18
                 usd = value_eth * eth_price
-                msg = f"🟢 *ETH 入金*
+                msg = f"""🟢 *ETH 入金*
 `{tx['from']} → {tx['to']}`
-💰 {value_eth:.6f} ETH ≈ ${usd:,.2f}"
+💰 {value_eth:.6f} ETH ≈ ${usd:,.2f}"""
+
                 send_message(msg)
                 last_seen[eth] = tx["hash"]
                 updated = True

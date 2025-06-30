@@ -74,9 +74,10 @@ def main():
             if tx and tx["transaction_id"] != last_seen.get(tron):
                 val = int(tx["value"]) / (10**int(tx["token_info"]["decimals"]))
                 symbol = tx["token_info"]["symbol"]
-                msg = f"🟢 *TRC20 入金*
+                msg = f"""🟢 *TRC20 入金*
 `{tx['from']} → {tx['to']}`
-💰 {val} {symbol}"
+💰 {val} {symbol}"""
+
                 send_message(msg)
                 last_seen[tron] = tx["transaction_id"]
                 updated = True

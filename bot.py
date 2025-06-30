@@ -17,59 +17,58 @@ def send_message(msg):
     except Exception as e:
         print("Telegram Error:", e)
 
-def get_price(symbol="ETHUSDT"):
+def get_price(symbol):
     try:
         r = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}").json()
         return float(r["price"])
-    except: return 0
+    except:
+        return 0
 
 def get_latest_eth_tx(address):
     url = f"https://api.etherscan.io/api?module=account&action=txlist&address={address}&sort=desc&apikey={ETHERSCAN_API_KEY}"
     try:
         r = requests.get(url).json()
-        txs = r.get("result", [])
-        return txs[0] if txs else None
-    except: return None
+        return r.get("result", [])[0] if r.get("result") else None
+    except:
+        return None
 
 def get_latest_tron_tx(address):
     url = f"https://api.trongrid.io/v1/accounts/{address}/transactions/trc20?limit=1"
     try:
         r = requests.get(url).json()
-        txs = r.get("data", [])
-        return txs[0] if txs else None
-    except: return None
+        return r.get("data", [])[0] if r.get("data") else None
+    except:
+        return None
 
 def get_latest_btc_tx(address):
     url = f"https://blockchain.info/rawaddr/{address}"
     try:
         r = requests.get(url).json()
-        txs = r.get("txs", [])
-        return txs[0] if txs else None
-    except: return None
+        return r.get("txs", [])[0] if r.get("txs") else None
+    except:
+        return None
 
 def main():
     last_seen = {}
     while True:
-        updated = False
         eth_price = get_price("ETHUSDT")
         btc_price = get_price("BTCUSDT")
 
+        # ETH
         for eth in ETH_ADDRESSES:
             eth = eth.strip()
             tx = get_latest_eth_tx(eth)
             if tx and tx["hash"] != last_seen.get(eth):
                 value_eth = int(tx["value"]) / 1e18
                 usd = value_eth * eth_price
-               msg = f"""🟢 *ETH 入金*
+                msg = f"""🟢 *ETH 入金*
 从: `{tx['from']}`
 到: `{tx['to']}`
 💰 {value_eth:.6f} ETH ≈ ${usd:,.2f}"""
-
-
                 send_message(msg)
                 last_seen[eth] = tx["hash"]
-                updated = True
 
+        # TRON (TRC20)
         for tron in TRON_ADDRESSES:
             tron = tron.strip()
             tx = get_latest_tron_tx(tron)
@@ -80,28 +79,24 @@ def main():
 从: `{tx['from']}`
 到: `{tx['to']}`
 💰 {val} {symbol}"""
-
-
                 send_message(msg)
                 last_seen[tron] = tx["transaction_id"]
-                updated = True
 
+        # BTC
         for btc in BTC_ADDRESSES:
             btc = btc.strip()
             tx = get_latest_btc_tx(btc)
             if tx and tx["hash"] != last_seen.get(btc):
                 total = sum([out["value"] for out in tx["out"] if out.get("addr") == btc]) / 1e8
                 usd_val = total * btc_price
-               msg = f"""🟢 *BTC 入金*
-从: `{tx['inputs'][0]['prev_out'].get('addr', '不明')}`
+                from_addr = tx.get("inputs", [{}])[0].get("prev_out", {}).get("addr", "不明")
+                msg = f"""🟢 *BTC 入金*
+从: `{from_addr}`
 到: `{btc}`
 💰 {total:.8f} BTC ≈ ${usd_val:,.2f} USD
 📦 TXID: `{tx['hash']}`"""
-
-
                 send_message(msg)
                 last_seen[btc] = tx["hash"]
-                updated = True
 
         time.sleep(30)
 

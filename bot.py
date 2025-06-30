@@ -1,3 +1,53 @@
+import os
+import time
+import requests
+
+TG_TOKEN = os.getenv("BOT_TOKEN")
+TG_CHAT_ID = os.getenv("CHAT_ID")
+ETH_ADDRESSES = os.getenv("ETH_ADDRESS", "").split(",")
+TRON_ADDRESSES = os.getenv("TRON_ADDRESS", "").split(",")
+BTC_ADDRESSES = os.getenv("BTC_ADDRESS", "").split(",")
+ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY")
+
+def send_message(msg):
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    data = {"chat_id": TG_CHAT_ID, "text": msg, "parse_mode": "Markdown"}
+    try:
+        requests.post(url, data=data)
+    except Exception as e:
+        print("Telegram Error:", e)
+
+def get_price(symbol):
+    try:
+        r = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}").json()
+        return float(r["price"])
+    except:
+        return 0
+
+def get_latest_eth_tx(address):
+    url = f"https://api.etherscan.io/api?module=account&action=txlist&address={address}&sort=desc&apikey={ETHERSCAN_API_KEY}"
+    try:
+        r = requests.get(url).json()
+        return r.get("result", [])[0] if r.get("result") else None
+    except:
+        return None
+
+def get_latest_tron_tx(address):
+    url = f"https://api.trongrid.io/v1/accounts/{address}/transactions/trc20?limit=1"
+    try:
+        r = requests.get(url).json()
+        return r.get("data", [])[0] if r.get("data") else None
+    except:
+        return None
+
+def get_latest_btc_tx(address):
+    url = f"https://blockchain.info/rawaddr/{address}"
+    try:
+        r = requests.get(url).json()
+        return r.get("txs", [])[0] if r.get("txs") else None
+    except:
+        return None
+
 def main():
     last_seen = {}
     while True:
@@ -18,17 +68,17 @@ def main():
                 send_message(msg)
                 last_seen[eth] = tx["hash"]
 
-        # TRON
+        # TRON (TRC20)
         for tron in TRON_ADDRESSES:
             tron = tron.strip()
             tx = get_latest_tron_tx(tron)
             if isinstance(tx, dict) and tx.get("transaction_id") and tx["transaction_id"] != last_seen.get(tron):
-                val = int(tx["value"]) / (10 ** int(tx["token_info"]["decimals"]))
+                val = int(tx["value"]) / (10**int(tx["token_info"]["decimals"]))
                 symbol = tx["token_info"]["symbol"]
                 msg = f"""🟢 *TRC20 入金*
 从: `{tx['from']}`
 到: `{tx['to']}`
-💰 {val} {symbol}"""
+💰 {val:.6f} {symbol}"""
                 send_message(msg)
                 last_seen[tron] = tx["transaction_id"]
 
@@ -49,3 +99,6 @@ def main():
                 last_seen[btc] = tx["hash"]
 
         time.sleep(30)
+
+if __name__ == "__main__":
+    main()

@@ -88,9 +88,10 @@ def main():
             if tx and tx["hash"] != last_seen.get(btc):
                 total = sum([out["value"] for out in tx["out"] if out.get("addr") == btc]) / 1e8
                 usd_val = total * btc_price
-                msg = f"🟢 *BTC 入金*
+                msg = f"""🟢 *BTC 入金*
 💰 {total:.8f} BTC ≈ ${usd_val:,.2f} USD
-📦 TXID: `{tx['hash']}`"
+📦 TXID: `{tx['hash']}`"""
+
                 send_message(msg)
                 last_seen[btc] = tx["hash"]
                 updated = True
